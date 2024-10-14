@@ -1,0 +1,23 @@
+{
+    "name": "zjwshisb/process-manager",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Zjwshisb\\ProcessManager\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "zhoujianwei",
+            "email": "361340272@qq.com"
+        }
+    ],
+    "require": {
+        "php" : "^8.1",
+        "symfony/process": "^6.4",
+        "monolog/monolog": "^3.7",
+        "ext-pcntl": "*",
+      "ext-posix": "*"
+    }
+}
