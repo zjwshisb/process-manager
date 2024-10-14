@@ -16,7 +16,7 @@ trait Repeatable {
         return $this->currentRunCount;
     }
 
-    public function setRepeatable(bool $autoRestart) : static {
+    public function setRepeatable(bool|int $autoRestart) : static {
         $this->repetitive = $autoRestart;
         return $this;
     }
@@ -27,7 +27,7 @@ trait Repeatable {
             return true;
         }
         if (is_int($this->repetitive)) {
-            return $this->repetitive < $this->currentRunCount;
+            return  $this->currentRunCount < $this->repetitive;
         }
         return false;
     }

@@ -1,4 +1,4 @@
 vendor
 .idea
-src.
 runtime
+src/runtime

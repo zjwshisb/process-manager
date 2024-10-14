@@ -9,41 +9,44 @@ interface ProcessInterface
     public function start(): void;
 
     /**
-     * Process is running or not
+     * Restart the process
+     * @return $this
      */
-    public function isRunning(): bool;
+    public function restart(): static;
 
     /**
      * process pid
      */
     public function getPid(): ?int;
 
+    public function getStartTime(): float;
+
+    public function getEndTime(): float;
+
+    public function getDurationTime(): float;
 
 
     public function getInfo(bool $withExit) : array;
 
     public function repeatable() : bool;
 
+    public function getRunCount() : int;
+
     /**
      * Get the process error output
      */
     public function getErrorOutput(): string;
 
-    /**
-     * Process is run success or not
-     */
-    public function isSuccessful() : bool;
+    public function getOutput(): string;
+
+
 
     /**
      * Check the Process is running out of time
      */
     public function checkTimeout();
 
-    /**
-     * Restart the process
-     * @return $this
-     */
-    public function restart(): static;
+
 
     public function getExitCode() : ?int;
 
@@ -54,4 +57,14 @@ interface ProcessInterface
     public function getTimeout(): ?float;
 
     public function getCommandLine(): ?string;
+
+    public function getUuid(): ?string;
+
+    /**
+     * Process is run success or not
+     */
+    public function isSuccessful() : bool;
+    public function isRunning(): bool;
+
+    public function isTerminated(): bool;
 }
