@@ -4,8 +4,8 @@ require_once "vendor/autoload.php";
 
 $m = new \Zjwshisb\ProcessManager\Manager();
 
-$m->spawnPHP(function () {
+$m->spawnPhp(function () {
   echo "haha". PHP_EOL;
 }, 5,  10, 5)
-    ->spawnCMD(["ls"], ["timeout" => 5],  10, 5);
+    ->spawnCmd(["ls"], ["timeout" => 5],  10, 5);
 $m->start();

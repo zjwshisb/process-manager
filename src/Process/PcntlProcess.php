@@ -7,7 +7,7 @@ use Symfony\Component\Process\Exception\LogicException;
 use Symfony\Component\Process\Exception\RuntimeException;
 use Symfony\Component\Process\Process;
 use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
-use Zjwshisb\ProcessManager\Traits\HasUuid;
+use Zjwshisb\ProcessManager\Traits\HasUid;
 use Zjwshisb\ProcessManager\Traits\WithEndTime;
 use Zjwshisb\ProcessManager\Traits\Repeatable;
 use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
@@ -15,7 +15,7 @@ use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProce
 
 class PcntlProcess implements ProcessInterface {
 
-    use WithEndTime,Repeatable,HasUuid;
+    use WithEndTime,Repeatable,HasUid;
 
     private array $processInformation = [];
 
@@ -39,15 +39,16 @@ class PcntlProcess implements ProcessInterface {
     /**
      * @param Closure|array|string $callback
      * $callback on can return string
-     * @param float $timeout
      */
-    public function __construct(public Closure|array|string $callback, float $timeout = 60)
+    public function __construct(public Closure|array|string $callback)
     {
-        if (!is_callable($this->callback)) {
-            throw new LogicException('Callback has to be a callable');
-        }
-        $this->timeout = $timeout;
         $this->setUuid();
+    }
+
+    public function setTimeout(float $timeout): static
+    {
+        $this->timeout = $timeout;
+        return $this;
     }
 
     public function start(): void
@@ -72,7 +73,7 @@ class PcntlProcess implements ProcessInterface {
         }
     }
 
-    protected function run($sockets): void
+    protected function run(array $sockets): void
     {
         cli_set_process_title("php pcntl process work");
         fclose($sockets[0]);
@@ -129,7 +130,7 @@ class PcntlProcess implements ProcessInterface {
     public function getInfo(bool $withExit = false): array
     {
        $info = [
-            "type" => "pcntl",
+           "type" => "pcntl",
            "pid" => $this->getPid(),
        ];
         if ($withExit) {
@@ -229,7 +230,6 @@ class PcntlProcess implements ProcessInterface {
         $this->socket = null;
         $this->output = null;
         $this->status = Process::STATUS_READY;
-
     }
 
     public function checkTimeout(): void

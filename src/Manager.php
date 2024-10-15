@@ -2,15 +2,18 @@
 
 namespace Zjwshisb\ProcessManager;
 
-
 use JetBrains\PhpStorm\NoReturn;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Symfony\Component\Process\Exception\LogicException;
+use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
+use Zjwshisb\ProcessManager\Group\ProcessGroup;
+use Zjwshisb\ProcessManager\Group\ProcessGroupInterface;
+use Zjwshisb\ProcessManager\Group\ProcProcessGroup;
 use Zjwshisb\ProcessManager\Process\PcntlProcess;
 use Zjwshisb\ProcessManager\Process\ProcessInterface;
-use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
 use Zjwshisb\ProcessManager\Process\ProcProcess;
 
 class Manager
@@ -28,10 +31,16 @@ class Manager
     protected array $runningProcesses = [];
 
     /**
-     * processes waiting to start
+     * processes which is running
      * @var array<ProcessInterface>
      */
-    protected array $waitingProcesses = [];
+    protected array $restartProcesses = [];
+
+    /**
+     * processes waiting to start
+     * @var array<ProcessGroupInterface>
+     */
+    protected array $processGroup = [];
 
     /**
      * psr-3 logger
@@ -39,17 +48,23 @@ class Manager
      */
     protected LoggerInterface $logger;
 
+    /**
+     * @var array $config
+     */
     protected array $config;
 
     public function __construct(?array $config = null)
     {
-        $config = array_merge($this->getDefaultConfig(), $config ?? [] );
-        $this->config = $config;;
-        $this->initLogger($config);
+        $this->config = array_merge($this->getDefaultConfig(), $config ?? []);
+        $this->initLogger();
         cli_set_process_title($config['name']);
     }
 
-    public function getDefaultConfig() : array
+    /**
+     * default config
+     * @return array
+     */
+    public function getDefaultConfig(): array
     {
         return [
             "name" => "PHP Process Manager",
@@ -62,19 +77,19 @@ class Manager
 
     /**
      * Init default logger
-     * @param array $config
      * @return $this
      */
-    protected function initLogger(array $config): static
+    protected function initLogger(): static
     {
+        $config = $this->config;
         $loggerConfig = $config['logger'];
-        $runtime = $config['runtime'];
-        $logFile = $runtime . "/process.log";
         if ($loggerConfig instanceof LoggerInterface) {
             $this->logger = $loggerConfig;
         } elseif (is_array($loggerConfig)) {
+            $runtime = $config['runtime'];
+            $logFile = $runtime . "/process.log";
             $logger = new Logger("process-manager");
-            $level = $loggerConfig['level'] ?? LogLevel::INFO;
+            $level = $loggerConfig['level'];
             $logger->pushHandler(new StreamHandler($logFile, $level));
             $this->setLogger($logger);
         }
@@ -92,103 +107,46 @@ class Manager
     }
 
     /**
-     * Add waiting process
-     * @param ProcessInterface $process
-     * @return $this
-     */
-    protected function addProcess(ProcessInterface $process): static
-    {
-        $this->waitingProcesses[] = $process;
-        return $this;
-    }
-
-    /**
      * Add CMD Process
-     *
      * @param array $cmd
-     * @param array{
-     *     timeout?: int,
-     *     cwd?: string,
-     *     env?: array,
-     *     input?: mixed,
-     * } $options
-     *
      * @param int $processCount
      * how many process to start
-     *
-     * @param bool|int $repetitive
-     * define process run times.
-     * false mean run once each process.
-     * ture mean run repetitive each process.
-     * integer mean run {integer} times each process.
-     *
-     * @return static
+     * @return ProcessGroup
      */
-    public function spawnCMD(array $cmd, array $options = [], int $processCount = 1, bool|int $repetitive = false): static
+    public function spawnCmd(array $cmd, int $processCount = 1): ProcessGroup
     {
-        $timeout = $options['timeout'] ?? 60;
+        $group = new ProcProcessGroup();
         while ($processCount > 0) {
-            $process = new ProcProcess($cmd,
-                $options['cwd'] ?? null,
-                $options['env'] ?? null,
-                $options['input'] ?? null,
-                $timeout
-            );
-            $process->setRepeatable($repetitive);
-            $this->addProcess($process);
+            $group->add(new ProcProcess($cmd));
             $processCount--;
         }
-        return $this;
+        $this->addProcessGroup($group);
+        return $group;
     }
 
     /**
      * Add PHP Process
      *
-     * @param array|callable|string $cmd
-     * @param int $timeout
+     * @param array|callable|string $callback
      * @param int $processCount
      * how many process to start
      *
-     * @param bool|int $repetitive
-     * define process run times.
-     * false mean run once each process.
-     * ture mean run repetitive each process.
-     * integer mean run {integer} times each process.
-     *
-     * @return static
+     * @return ProcessGroup
      */
-    public function spawnPHP(array|callable|string $cmd, int $timeout = 60 , int $processCount = 1, bool|int $repetitive = false): static
+    public function spawnPhp(array|callable|string $callback, int $processCount = 1): ProcessGroup
     {
+        if (!is_callable($callback)) {
+            throw new LogicException('Params callback must can be called as a function');
+        }
+        $group = new ProcessGroup();
         while ($processCount > 0) {
-            $process = new PcntlProcess($cmd, $timeout);
-            $process->setRepeatable($repetitive);
-            $this->addProcess($process);
+            $group->add(new PcntlProcess($callback));
             $processCount--;
         }
-        return $this;
+        $this->addProcessGroup($group);
+        return $group;
     }
 
-    /**
-     * Start waiting processes
-     * @param bool $isRestart
-     * @return $this
-     */
-    protected function startProcesses(bool $isRestart = false): static
-    {
-        $action = $isRestart ? "Restart" : "Start";
-        foreach ($this->waitingProcesses as $process) {
-            if ($isRestart) {
-                $process = $process->restart();
-            } else {
-                $process->start();
-            }
-            $pid = $process->getPid();
-            $this->runningProcesses[$pid] = $process;
-            $this->logger->info($this->getProcessTag($process, $action), $process->getInfo());
-        }
-        $this->waitingProcesses = [];
-        return $this;
-    }
 
     /**
      * Handle success process
@@ -199,7 +157,7 @@ class Manager
     {
         $this->logger->info($this->getProcessTag($process, "Down"), $process->getInfo(true));
         if ($process->repeatable()) {
-            $this->addProcess($process);
+            $this->restartProcesses[] = $process;
         }
     }
 
@@ -213,8 +171,14 @@ class Manager
     {
         $this->logger->info($this->getProcessTag($process, "Timeout"), $process->getInfo(true));
         if ($process->repeatable()) {
-            $this->addProcess($process);
+            $this->restartProcesses[] = $process;
         }
+    }
+
+    protected function addProcessGroup(ProcessGroup $group): static
+    {
+        $this->processGroup[] = $group;
+        return $this;
     }
 
     /**
@@ -225,13 +189,13 @@ class Manager
     protected function handleProcessError(ProcessInterface $process): void
     {
         $this->logger->error($this->getProcessTag($process, "Error"), array_merge(
-            $process->getInfo(true),
-            [
-                "error" => $process->getErrorOutput()
-            ])
+                $process->getInfo(true),
+                [
+                    "error" => $process->getErrorOutput()
+                ])
         );
         if ($process->repeatable()) {
-            $this->addProcess($process);
+            $this->restartProcesses[] = $process;
         }
     }
 
@@ -246,28 +210,72 @@ class Manager
 
     #[NoReturn] public function exit(): void
     {
-        $this->stopProcess();
+        $this->stopProcesses();
         exit;
     }
 
-    public function stopProcess(): void
+    /**
+     * @return $this
+     */
+    protected function startProcesses(): static
+    {
+        foreach ($this->processGroup as $group) {
+            foreach ($group as $process) {
+                $process->start();
+                $pid = $process->getPid();
+                $this->runningProcesses[$pid] = $process;
+                $this->logger->info($this->getProcessTag($process, "start"), $process->getInfo());
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    protected function restartProcesses(): static
+    {
+        foreach ($this->restartProcesses as $process) {
+            $process->start();
+            $pid = $process->getPid();
+            $this->runningProcesses[$pid] = $process;
+            $this->logger->info($this->getProcessTag($process, "restart"), $process->getInfo());
+        }
+        $this->restartProcesses = [];
+        return $this;
+    }
+
+    /**
+     * Stop all processes
+     * @return void
+     */
+    public function stopProcesses(): void
     {
         foreach ($this->runningProcesses as $process) {
             $process->stop();
         }
     }
 
+    /**
+     * Register Signal Handler
+     * @return void
+     */
     protected function registerSignalHandler(): void
     {
         pcntl_signal(SIGTERM, [$this, 'exit']);
-        pcntl_signal(SIGINT,[$this, 'exit']);
+        pcntl_signal(SIGINT, [$this, 'exit']);
         pcntl_signal(SIGTSTP, [$this, 'exit']);
     }
 
 
-    protected function getProcessTag(ProcessInterface $process , string $action): string
+    /**
+     * @param ProcessInterface $process
+     * @param string $action
+     * @return string
+     */
+    protected function getProcessTag(ProcessInterface $process, string $action): string
     {
-        return sprintf("Process[%s][%d] %s",  $process->getUuid(), $process->getRunCount(), $action);
+        return sprintf("Process[%s][%d] %s", $process->getUid(), $process->getRunCount(), $action);
     }
 
     /**
@@ -305,8 +313,8 @@ class Manager
                 $sleepTime = $sleepTime * 2;
             } else {
                 $sleepTime = $initSleepTime;
-                if (sizeof($this->waitingProcesses) > 0) {
-                    $this->startProcesses(true);
+                if (sizeof($this->restartProcesses) > 0) {
+                    $this->restartProcesses();
                 }
             }
             if (sizeof($this->runningProcesses) === 0) {

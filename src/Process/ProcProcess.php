@@ -5,14 +5,14 @@ namespace Zjwshisb\ProcessManager\Process;
 use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
-use Zjwshisb\ProcessManager\Traits\HasUuid;
+use Zjwshisb\ProcessManager\Traits\HasUid;
 use Zjwshisb\ProcessManager\Traits\WithEndTime;
 use Zjwshisb\ProcessManager\Traits\Repeatable;
 
 class ProcProcess extends SymfonyProcess implements ProcessInterface
 {
 
-    use WithEndTime, Repeatable, HasUuid, WithEndTime;
+    use WithEndTime, Repeatable, HasUid, WithEndTime;
 
     public function __construct(array $command, ?string $cwd = null, ?array $env = null, mixed $input = null, ?float $timeout = 60)
     {
@@ -25,7 +25,8 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
     {
         $info = [
             "cmd" => $this->getCommandLine(),
-            "uuid" => $this->getUuid(),
+            "type" => "proc",
+            "pid" => $this->getPid(),
         ];
         if ($withExit) {
             $info["exit code"] = $this->getExitCode();

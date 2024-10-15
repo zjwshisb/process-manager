@@ -1,10 +1,10 @@
 <?php
 namespace Zjwshisb\ProcessManager\Exception;
-use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
-use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\RuntimeException;
 use Zjwshisb\ProcessManager\Process\ProcessInterface;
+use Symfony\Component\Process\Exception\ProcessTimedOutException as BaseProcessTimedOutException;
 
-class ProcessTimedOutException extends SymfonyProcessTimedOutException
+class ProcessTimedOutException extends RuntimeException
 {
     private ProcessInterface $process;
     private int $timeoutType;
@@ -13,15 +13,12 @@ class ProcessTimedOutException extends SymfonyProcessTimedOutException
     {
         $this->process = $process;
         $this->timeoutType = $timeoutType;
-        if ($process instanceof  Process ){
-            parent::__construct($process, $timeoutType);
-        } else {
-            $this->message = sprintf(
-                'The process "%s" exceeded the timeout of %s seconds.',
-                $process->getCommandLine(),
-                $this->getExceededTimeout()
-            );
-        }
+
+        parent::__construct(sprintf(
+            'The process "%s" exceeded the timeout of %s seconds.',
+            $process->getCommandLine(),
+            $this->getExceededTimeout()
+        ));
     }
 
     /**
@@ -37,7 +34,7 @@ class ProcessTimedOutException extends SymfonyProcessTimedOutException
      */
     public function isGeneralTimeout(): bool
     {
-        return self::TYPE_GENERAL === $this->timeoutType;
+        return BaseProcessTimedOutException::TYPE_GENERAL === $this->timeoutType;
     }
 
     /**
@@ -45,14 +42,14 @@ class ProcessTimedOutException extends SymfonyProcessTimedOutException
      */
     public function isIdleTimeout(): bool
     {
-        return self::TYPE_IDLE === $this->timeoutType;
+        return BaseProcessTimedOutException::TYPE_IDLE === $this->timeoutType;
     }
 
     public function getExceededTimeout(): ?float
     {
         return match ($this->timeoutType) {
-            self::TYPE_GENERAL => $this->process->getTimeout(),
-            self::TYPE_IDLE => $this->process->getIdleTimeout(),
+            BaseProcessTimedOutException::TYPE_GENERAL => $this->process->getTimeout(),
+            BaseProcessTimedOutException::TYPE_IDLE => $this->process->getIdleTimeout(),
             default => throw new \LogicException(sprintf('Unknown timeout type "%d".', $this->timeoutType)),
         };
     }
