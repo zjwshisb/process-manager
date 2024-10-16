@@ -1,5 +1,7 @@
 <?php
-namespace Zjwshisb\ProcessManager\Traits;
+namespace Zjwshisb\ProcessManager\Process\Traits;
+
+use Zjwshisb\ProcessManager\Util\Str;
 
 trait HasUid {
     protected ?string $uid = null;
@@ -9,10 +11,12 @@ trait HasUid {
         return $this->uid;
     }
 
-    public function setUuid(): void
+    public function setUid(): void
     {
         if (is_null($this->uid)) {
-            $this->uid = uniqid();
+            $this->uid =  Str::random();
         }
     }
+
+
 }

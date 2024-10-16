@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace Zjwshisb\ProcessManager\Process;
 
 interface ProcessInterface
@@ -46,12 +47,12 @@ interface ProcessInterface
     /**
      * @return bool
      */
-    public function repeatable() : bool;
+    public function needRestart() : bool;
 
     /**
      * @return int
      */
-    public function getRunCount() : int;
+    public function getCurrentRunTimes() : int;
 
     /**
      * Get the process error output
@@ -62,7 +63,7 @@ interface ProcessInterface
      * Get the process successful output
      * @return string
      */
-    public function getOutput(): string;
+    public function getOutput(): mixed;
 
 
     /**
@@ -103,7 +104,6 @@ interface ProcessInterface
     public function getIdleTimeout(): ?float;
 
 
-
     /**
      * Get the command line
      * only support ProcProcess
@@ -117,6 +117,12 @@ interface ProcessInterface
      * @return string|null
      */
     public function getUid(): ?string;
+
+
+    /**
+     * @return void
+     */
+    public function setUid(): void;
 
     /**
      * Process is run success or not
@@ -134,4 +140,19 @@ interface ProcessInterface
      * @return bool
      */
     public function isTerminated(): bool;
+
+    /**
+     * trigger success event handle
+     */
+    public function triggerSuccessEvent();
+
+    /**
+     * trigger error event handle
+     */
+    public function triggerErrorEvent();
+
+    /**
+     * trigger timeout event handle
+     */
+    public function triggerTimeoutEvent();
 }

@@ -1,11 +1,15 @@
 <?php
-namespace Zjwshisb\ProcessManager\Traits;
+namespace Zjwshisb\ProcessManager\Process\Traits;
 
 use Symfony\Component\Process\Exception\LogicException;
 
 trait WithEndTime {
     protected ?float $endTime = null;
 
+    /**
+     * set process terminate time
+     * @return void
+     */
     public function updateEndTime(): void
     {
         if (is_null($this->endTime)) {
@@ -13,6 +17,10 @@ trait WithEndTime {
         }
     }
 
+    /**
+     * Get end time
+     * @return float
+     */
     public function getEndTime(): float
     {
         if ($this->isTerminated()) {

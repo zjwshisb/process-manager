@@ -1,29 +1,27 @@
 <?php
+declare(strict_types=1);
 namespace Zjwshisb\ProcessManager\Process;
-
 
 use Closure;
 use Symfony\Component\Process\Exception\LogicException;
+use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
 use Symfony\Component\Process\Exception\RuntimeException;
 use Symfony\Component\Process\Process;
+use Throwable;
 use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
-use Zjwshisb\ProcessManager\Traits\HasUid;
-use Zjwshisb\ProcessManager\Traits\WithEndTime;
-use Zjwshisb\ProcessManager\Traits\Repeatable;
-use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
+use Zjwshisb\ProcessManager\Process\Traits\Event;
+use Zjwshisb\ProcessManager\Process\Traits\HasUid;
+use Zjwshisb\ProcessManager\Process\Traits\Repeatable;
+use Zjwshisb\ProcessManager\Process\Traits\WithEndTime;
 
 
 class PcntlProcess implements ProcessInterface {
 
-    use WithEndTime,Repeatable,HasUid;
-
+    use WithEndTime,Repeatable,HasUid,Event;
     private array $processInformation = [];
-
     private ?float $starttime = null;
-    private ?float $timeout;
-
+    private ?float $timeout = null;
     private ?int $exitcode = null;
-
     private string $status = Process::STATUS_READY;
 
     private array $fallbackStatus = [];
@@ -42,7 +40,6 @@ class PcntlProcess implements ProcessInterface {
      */
     public function __construct(public Closure|array|string $callback)
     {
-        $this->setUuid();
     }
 
     public function setTimeout(float $timeout): static
@@ -63,7 +60,7 @@ class PcntlProcess implements ProcessInterface {
             $this->run($sockets);
         } else {
             // parent process
-            $this->addRunCount();
+            $this->addRunTimes();
             fclose($sockets[1]);
             $this->socket = $sockets[0];
             $this->processInformation["pid"] = $pid;
@@ -77,15 +74,17 @@ class PcntlProcess implements ProcessInterface {
     {
         cli_set_process_title("php pcntl process work");
         fclose($sockets[0]);
+        // reset random seeder
+        mt_srand(posix_getpid());
         $exitCode = 0;
         try {
             $result = call_user_func($this->callback, $this);
-        }catch (\Throwable $throwable) {
+        }catch (Throwable $throwable) {
             $result = $throwable->getMessage();
             $exitCode = 2;
         }
         if ($result) {
-            fwrite($sockets[1], $result);
+            fwrite($sockets[1], serialize($result));
         }
         fclose($sockets[1]);
         exit($exitCode);
@@ -150,6 +149,7 @@ class PcntlProcess implements ProcessInterface {
 
     protected function close()
     {
+        echo "close" . $this->getUid(). PHP_EOL;
         if ($this->fallbackStatus && !empty($this->fallbackStatus['signaled'])) {
             $this->processInformation = $this->fallbackStatus + $this->processInformation;
             $this->processInformation['running'] = false;
@@ -189,10 +189,12 @@ class PcntlProcess implements ProcessInterface {
         return true;
     }
 
-    public function getOutput() : string
+    public function getOutput() : mixed
     {
         if ($this->isSuccessful()) {
-            return $this->output;
+            if ($this->output) {
+                return unserialize($this->output);
+            }
         }
         return "";
     }
@@ -223,6 +225,7 @@ class PcntlProcess implements ProcessInterface {
     private function resetProcessData(): void
     {
         $this->starttime = null;
+        $this->endTime = null;
         $this->exitcode = null;
         $this->processInformation = [];
         $this->latestSignal = null;
@@ -283,15 +286,9 @@ class PcntlProcess implements ProcessInterface {
         return Process::STATUS_TERMINATED == $this->status;
     }
 
-
     public function __clone()
     {
         $this->resetProcessData();
-    }
-
-    public function __destruct()
-    {
-        $this->close();
     }
 
     public function getStartTime(): float
@@ -301,4 +298,5 @@ class PcntlProcess implements ProcessInterface {
         }
        return $this->starttime;
     }
+
 }

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace Zjwshisb\ProcessManager\Exception;
 use Symfony\Component\Process\Exception\RuntimeException;
 use Zjwshisb\ProcessManager\Process\ProcessInterface;

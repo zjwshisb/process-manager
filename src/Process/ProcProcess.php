@@ -1,24 +1,20 @@
 <?php
-
+declare(strict_types=1);
 namespace Zjwshisb\ProcessManager\Process;
 
 use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
-use Zjwshisb\ProcessManager\Traits\HasUid;
-use Zjwshisb\ProcessManager\Traits\WithEndTime;
-use Zjwshisb\ProcessManager\Traits\Repeatable;
+use Zjwshisb\ProcessManager\Process\Traits\Event;
+use Zjwshisb\ProcessManager\Process\Traits\HasUid;
+use Zjwshisb\ProcessManager\Process\Traits\Repeatable;
+use Zjwshisb\ProcessManager\Process\Traits\WithEndTime;
 
 class ProcProcess extends SymfonyProcess implements ProcessInterface
 {
 
-    use WithEndTime, Repeatable, HasUid, WithEndTime;
+    use WithEndTime, Repeatable, HasUid, Event;
 
-    public function __construct(array $command, ?string $cwd = null, ?array $env = null, mixed $input = null, ?float $timeout = 60)
-    {
-        parent::__construct($command, $cwd, $env, $input, $timeout);
-        $this->setUuid();
-    }
 
 
     public function getInfo($withExit = false): array
@@ -35,11 +31,10 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
         return $info;
     }
 
-
     public function start(?callable $callback = null, array $env = []): void
     {
         parent::start();
-        $this->addRunCount();
+        $this->addRunTimes();
     }
 
     protected function updateStatus(bool $blocking): void
@@ -61,7 +56,5 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
                     SymfonyProcessTimedOutException::TYPE_IDLE
             );
         }
-
     }
-
 }
