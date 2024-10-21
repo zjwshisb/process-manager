@@ -1,6 +1,10 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Zjwshisb\ProcessManager\Process;
+
+use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
 
 interface ProcessInterface
 {
@@ -14,6 +18,14 @@ interface ProcessInterface
      * @return $this
      */
     public function restart(): static;
+
+    /**
+     * stop the process
+     * @param float $timeout
+     * @param int|null $signal
+     * @return int|null
+     */
+    public function stop(float $timeout = 10, ?int $signal = null): ?int;
 
     /**
      * process pid
@@ -40,19 +52,19 @@ interface ProcessInterface
 
     /**
      * @param bool $withExit
-     * @return array
+     * @return array<string, mixed>
      */
-    public function getInfo(bool $withExit) : array;
+    public function getInfo(bool $withExit = false): array;
 
     /**
      * @return bool
      */
-    public function needRestart() : bool;
+    public function needRestart(): bool;
 
     /**
      * @return int
      */
-    public function getCurrentRunTimes() : int;
+    public function getCurrentRunTimes(): int;
 
     /**
      * Get the process error output
@@ -61,15 +73,16 @@ interface ProcessInterface
 
     /**
      * Get the process successful output
-     * @return string
+     * @return mixed
      */
     public function getOutput(): mixed;
 
 
     /**
      * Check the Process is running out of time
+     * @throws ProcessTimedOutException
      */
-    public function checkTimeout();
+    public function checkTimeout(): void;
 
     /**
      * Get the Process timeout
@@ -79,7 +92,7 @@ interface ProcessInterface
 
     /**
      * @param float $timeout
-     * @return mixed
+     * @return static
      */
     public function setTimeout(float $timeout): static;
 
@@ -87,13 +100,13 @@ interface ProcessInterface
      * Get process exit code
      * @return int|null
      */
-    public function getExitCode() : ?int;
+    public function getExitCode(): ?int;
 
     /**
      * Get process exit code text
      * @return string|null
      */
-    public function getExitCodeText() : ?string;
+    public function getExitCodeText(): ?string;
 
     /**
      * Get the idle time
@@ -127,7 +140,7 @@ interface ProcessInterface
     /**
      * Process is run success or not
      */
-    public function isSuccessful() : bool;
+    public function isSuccessful(): bool;
 
     /**
      * Process is running or not.
@@ -143,16 +156,19 @@ interface ProcessInterface
 
     /**
      * trigger success event handle
+     * @return static
      */
-    public function triggerSuccessEvent();
+    public function triggerSuccessEvent() : static;
 
     /**
      * trigger error event handle
+     * @return static
      */
-    public function triggerErrorEvent();
+    public function triggerErrorEvent(): static;
 
     /**
      * trigger timeout event handle
+     * @return static
      */
-    public function triggerTimeoutEvent();
+    public function triggerTimeoutEvent(): static;
 }

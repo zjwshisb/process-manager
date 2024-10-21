@@ -18,6 +18,9 @@
         "symfony/process": "^6.4",
         "monolog/monolog": "^3.7",
         "ext-pcntl": "*",
-      "ext-posix": "*"
+        "ext-posix": "*"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.12"
     }
 }

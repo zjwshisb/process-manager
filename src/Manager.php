@@ -1,9 +1,9 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Zjwshisb\ProcessManager;
 
-use JetBrains\PhpStorm\NoReturn;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
@@ -18,9 +18,9 @@ class Manager
 {
     /**
      * manager identified name
-     * @var string|mixed
+     * @var string|null
      */
-    protected string $name;
+    protected string|null $name = null;
 
     /**
      * processes which is running
@@ -47,25 +47,47 @@ class Manager
     protected LoggerInterface $logger;
 
     /**
-     * @var array $config
+     * @var array{
+     *     name: string,
+     *     logger: LoggerInterface | array{
+     *         level: LogLevel
+     *     },
+     *     runtime: string
+     * } $config
      */
     protected array $config;
 
     /**
-     * @param array|null $config
+     * @param array{
+     *     name?: string,
+     *     logger?: LoggerInterface | array{
+     *         level: LogLevel
+     *     },
+     *     runtime?: string
+     * }|null $config
      */
     public function __construct(?array $config = null)
     {
-        $this->config = array_merge($this->getDefaultConfig(), $config ?? []);
+        $defaultConfig = $this->getDefaultConfig();
+        if ($config) {
+            $defaultConfig = array_merge($defaultConfig, $config);
+        }
+        $this->config = $defaultConfig;
         $this->initLogger();
         cli_set_process_title($this->config['name']);
     }
 
     /**
      * default config
-     * @return array
+     * @return array{
+     *      name: string,
+     *      logger: array{
+     *          level: LogLevel
+     *      },
+     *      runtime: string
+     *  }
      */
-    public function getDefaultConfig(): array
+    protected function getDefaultConfig(): array
     {
         return [
             "name" => "PHP Process Manager",
@@ -100,16 +122,17 @@ class Manager
     /**
      * Set psr-3 logger
      * @param LoggerInterface $logger
-     * @return void
+     * @return static
      */
-    public function setLogger(LoggerInterface $logger): void
+    public function setLogger(LoggerInterface $logger): static
     {
         $this->logger = $logger;
+        return $this;
     }
 
     /**
      * Add CMD Job
-     * @param array $cmd
+     * @param array<string> $cmd
      * @return ProcJob
      */
     public function spawnCmd(array $cmd): ProcJob
@@ -121,10 +144,10 @@ class Manager
 
     /**
      * Add PHP Process
-     * @param array|callable|string $callback
+     * @param callable $callback
      * @return PcntlJob
      */
-    public function spawnPhp(array|callable|string $callback): PcntlJob
+    public function spawnPhp(callable $callback): PcntlJob
     {
         if (!is_callable($callback)) {
             throw new LogicException('Params callback must can be called as a function');
@@ -132,7 +155,18 @@ class Manager
         $job = new PcntlJob(new PcntlProcess($callback));
         $this->jobs[] = $job;
         return $job;
+    }
 
+    /**
+     * @param ProcessInterface $process
+     * @return $this
+     */
+    protected function addRestartProcess(ProcessInterface $process): static
+    {
+        if ($process->needRestart()) {
+            $this->restartProcesses[] = $process;
+        }
+        return $this;
     }
 
 
@@ -145,9 +179,7 @@ class Manager
     {
         $this->logger->info($this->getProcessTag($process, "Down"), $process->getInfo(true));
         $process->triggerSuccessEvent();
-        if ($process->needRestart()) {
-            $this->restartProcesses[] = $process;
-        }
+        $this->addRestartProcess($process);
     }
 
     /**
@@ -160,9 +192,7 @@ class Manager
     {
         $this->logger->info($this->getProcessTag($process, "Timeout"), $process->getInfo(true));
         $process->triggerTimeoutEvent();
-        if ($process->needRestart()) {
-            $this->restartProcesses[] = $process;
-        }
+        $this->addRestartProcess($process);
     }
 
 
@@ -173,16 +203,17 @@ class Manager
      */
     protected function handleProcessError(ProcessInterface $process): void
     {
-        $this->logger->error($this->getProcessTag($process, "Error"), array_merge(
+        $this->logger->error(
+            $this->getProcessTag($process, "Error"),
+            array_merge(
                 $process->getInfo(true),
                 [
                     "error" => $process->getErrorOutput()
-                ])
+                ]
+            )
         );
         $process->triggerErrorEvent();
-        if ($process->needRestart()) {
-            $this->restartProcesses[] = $process;
-        }
+        $this->addRestartProcess($process);
     }
 
     /**
@@ -194,7 +225,7 @@ class Manager
         $this->logger->info("End Manager");
     }
 
-    #[NoReturn] public function exit(): void
+    public function exit(): void
     {
         $this->stopProcesses();
         exit;
@@ -278,6 +309,7 @@ class Manager
         while (true) {
             $this->runningProcesses = array_filter($this->runningProcesses, function (ProcessInterface $process) {
                 if (!$process->isRunning()) {
+                    echo "haha";
                     if ($process->isSuccessful()) {
                         $this->handleProcessSuccess($process);
                     } else {

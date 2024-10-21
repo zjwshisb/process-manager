@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Zjwshisb\ProcessManager\Process;
 
 use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
@@ -12,10 +14,10 @@ use Zjwshisb\ProcessManager\Process\Traits\WithEndTime;
 
 class ProcProcess extends SymfonyProcess implements ProcessInterface
 {
-
-    use WithEndTime, Repeatable, HasUid, Event;
-
-
+    use WithEndTime;
+    use Repeatable;
+    use HasUid;
+    use Event;
 
     public function getInfo($withExit = false): array
     {
@@ -31,6 +33,11 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
         return $info;
     }
 
+    /**
+     * @param callable|null $callback
+     * @param array<string> $env
+     * @return void
+     */
     public function start(?callable $callback = null, array $env = []): void
     {
         parent::start();
@@ -40,7 +47,7 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
     protected function updateStatus(bool $blocking): void
     {
         parent::updateStatus($blocking);
-        if ($this->isRunning()) {
+        if (! $this->isRunning()) {
             $this->updateEndTime();
         }
     }
@@ -50,7 +57,8 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
         try {
             parent::checkTimeout();
         } catch (SymfonyProcessTimedOutException $exception) {
-            throw new ProcessTimedOutException($exception->getProcess(),
+            throw new ProcessTimedOutException(
+                $this,
                 $exception->isGeneralTimeout() ?
                     SymfonyProcessTimedOutException::TYPE_GENERAL :
                     SymfonyProcessTimedOutException::TYPE_IDLE

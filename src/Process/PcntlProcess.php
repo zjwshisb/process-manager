@@ -1,8 +1,10 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Zjwshisb\ProcessManager\Process;
 
-use Closure;
+use BadMethodCallException;
 use Symfony\Component\Process\Exception\LogicException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyProcessTimedOutException;
 use Symfony\Component\Process\Exception\RuntimeException;
@@ -14,16 +16,35 @@ use Zjwshisb\ProcessManager\Process\Traits\HasUid;
 use Zjwshisb\ProcessManager\Process\Traits\Repeatable;
 use Zjwshisb\ProcessManager\Process\Traits\WithEndTime;
 
+class PcntlProcess implements ProcessInterface
+{
+    use WithEndTime;
+    use Repeatable;
+    use HasUid;
+    use Event;
 
-class PcntlProcess implements ProcessInterface {
-
-    use WithEndTime,Repeatable,HasUid,Event;
+    /**
+     * @var array{
+     *     signaled?: bool,
+     *     exitcode?: int|null,
+     *     termsig?: int|null,
+     *     pid?: int|null,
+     *     running?: bool
+     * }
+     */
     private array $processInformation = [];
     private ?float $starttime = null;
     private ?float $timeout = null;
     private ?int $exitcode = null;
     private string $status = Process::STATUS_READY;
 
+    /**
+     * @var array{
+     *     signaled?: bool,
+     *     exitcode?:int,
+     *     termsig?:int,
+     * }
+     */
     private array $fallbackStatus = [];
 
     private ?int $latestSignal = null;
@@ -35,11 +56,17 @@ class PcntlProcess implements ProcessInterface {
     private ?string $output = null;
 
     /**
-     * @param Closure|array|string $callback
+     * @var callable $callback
+     */
+    protected $callback;
+
+    /**
+     * @param callable $callback
      * $callback on can return string
      */
-    public function __construct(public Closure|array|string $callback)
+    public function __construct(callable $callback)
     {
+        $this->callback = $callback;
     }
 
     public function setTimeout(float $timeout): static
@@ -51,6 +78,9 @@ class PcntlProcess implements ProcessInterface {
     public function start(): void
     {
         $sockets = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        if (! $sockets) {
+            throw new RuntimeException('Failed to create socket pair.');
+        }
         $pid = pcntl_fork();
         if ($pid == -1) {
             throw new LogicException("pcntl_fork() failed");
@@ -70,16 +100,20 @@ class PcntlProcess implements ProcessInterface {
         }
     }
 
+    /**
+     * @param array<resource> $sockets
+     * @return void
+     */
     protected function run(array $sockets): void
     {
-        cli_set_process_title("php pcntl process work");
+        cli_set_process_title("php pcntl process worker");
         fclose($sockets[0]);
         // reset random seeder
         mt_srand(posix_getpid());
         $exitCode = 0;
         try {
             $result = call_user_func($this->callback, $this);
-        }catch (Throwable $throwable) {
+        } catch (Throwable $throwable) {
             $result = $throwable->getMessage();
             $exitCode = 2;
         }
@@ -96,10 +130,17 @@ class PcntlProcess implements ProcessInterface {
             return;
         }
         if (empty($this->fallbackStatus) || empty($this->fallbackStatus['signaled'])) {
-            $result = pcntl_waitpid($this->getPid(), $status, WNOHANG );
-            if( $result == $this->getPid()){
+            $pid = $this->getPid();
+            if (!$pid) {
+                throw new RuntimeException('Failed to get process pid.');
+            }
+            $result = pcntl_waitpid($pid, $status, WNOHANG);
+            if ($result == $this->getPid()) {
                 if (pcntl_wifexited($status)) {
-                    $this->exitcode = pcntl_wexitstatus($status);
+                    $exitcode =  pcntl_wexitstatus($status);
+                    if ($exitcode !== false) {
+                        $this->exitcode = $exitcode;
+                    }
                 }
                 $this->processInformation['exitcode'] = $this->exitcode;
                 $this->processInformation['signaled'] = false;
@@ -114,24 +155,24 @@ class PcntlProcess implements ProcessInterface {
 
     public function isRunning(): bool
     {
-        if( $this->status !== Process::STATUS_STARTED) {
+        if ($this->status !== Process::STATUS_STARTED) {
             return false;
         }
         $this->updateStatus();
         return $this->processInformation['running'] ?? false;
     }
 
-    public function getPid() :?int
+    public function getPid(): ?int
     {
         return $this->processInformation["pid"] ?? null;
     }
 
     public function getInfo(bool $withExit = false): array
     {
-       $info = [
-           "type" => "pcntl",
-           "pid" => $this->getPid(),
-       ];
+        $info = [
+            "type" => "pcntl",
+            "pid" => $this->getPid(),
+        ];
         if ($withExit) {
             $info["exit code"] = $this->getExitCode();
             $info['exit text'] = $this->getExitCodeText();
@@ -139,17 +180,17 @@ class PcntlProcess implements ProcessInterface {
         return $info;
     }
 
-    public function stop($signal = SIGTERM): void
+    public function stop(float $timeout =0, int|null $signal = SIGTERM): ?int
     {
         if ($this->isRunning()) {
             $this->doSignal($signal, false);
         }
-        $this->close();
+        return $this->close();
     }
 
-    protected function close()
+
+    protected function close() : int|null
     {
-        echo "close" . $this->getUid(). PHP_EOL;
         if ($this->fallbackStatus && !empty($this->fallbackStatus['signaled'])) {
             $this->processInformation = $this->fallbackStatus + $this->processInformation;
             $this->processInformation['running'] = false;
@@ -166,15 +207,27 @@ class PcntlProcess implements ProcessInterface {
         }
         if ($this->socket) {
             $output = fgets($this->socket);
-            $this->output = $output;
+            if ($output !== false ) {
+                $this->output = $output;
+            } else {
+                $this->output = "";
+            }
             fclose($this->socket);
             $this->socket = null;
         }
         return $this->exitcode;
     }
 
-    public function doSignal(int $signal, $throwException = true): bool
+    /**
+     * @param int|null $signal
+     * @param bool $throwException
+     * @return bool
+     */
+    public function doSignal(int|null $signal = null, bool $throwException = true): bool
     {
+        if (!$signal) {
+            $signal = SIGTERM;
+        }
         if (null === $pid = $this->getPid()) {
             if ($throwException) {
                 throw new LogicException('Cannot send signal on a non running process.');
@@ -189,7 +242,7 @@ class PcntlProcess implements ProcessInterface {
         return true;
     }
 
-    public function getOutput() : mixed
+    public function getOutput(): mixed
     {
         if ($this->isSuccessful()) {
             if ($this->output) {
@@ -200,8 +253,11 @@ class PcntlProcess implements ProcessInterface {
     }
     public function getErrorOutput(): string
     {
-        if (!$this->isSuccessful()) {
-          return $this->output;
+        if (!$this->isSuccessful()){
+            if (is_null($this->output)) {
+                return "";
+            }
+            return $this->output;
         }
         return "";
     }
@@ -291,12 +347,22 @@ class PcntlProcess implements ProcessInterface {
         $this->resetProcessData();
     }
 
+    public function __sleep(): array
+    {
+        throw new BadMethodCallException('Cannot serialize '.__CLASS__);
+    }
+
+    public function __wakeup()
+    {
+        throw new BadMethodCallException('Cannot unserialize '.__CLASS__);
+    }
+
     public function getStartTime(): float
     {
-        if ($this->isStarted()) {
+        if ($this->isStarted() || is_null($this->starttime)) {
             throw new LogicException('Start time is only available after process start.');
         }
-       return $this->starttime;
+        return $this->starttime;
     }
 
 }

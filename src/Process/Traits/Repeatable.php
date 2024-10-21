@@ -1,7 +1,9 @@
 <?php
+
 namespace Zjwshisb\ProcessManager\Process\Traits;
 
-trait Repeatable {
+trait Repeatable
+{
     protected int $runTimes = 1;
     protected int $currentRunTimes = 0;
 
@@ -25,7 +27,8 @@ trait Repeatable {
      * negative or zero mean infinite
      * @return $this
      */
-    public function setRunTimes(int $runTimes) : static {
+    public function setRunTimes(int $runTimes): static
+    {
         $this->runTimes = $runTimes;
         return $this;
     }
@@ -34,7 +37,7 @@ trait Repeatable {
      * whether process need to restart
      * @return bool
      */
-    public function needRestart() : bool
+    public function needRestart(): bool
     {
         if ($this->runTimes <= 0) {
             return true;

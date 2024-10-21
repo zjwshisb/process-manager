@@ -1,6 +1,9 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Zjwshisb\ProcessManager\Exception;
+
 use Symfony\Component\Process\Exception\RuntimeException;
 use Zjwshisb\ProcessManager\Process\ProcessInterface;
 use Symfony\Component\Process\Exception\ProcessTimedOutException as BaseProcessTimedOutException;
