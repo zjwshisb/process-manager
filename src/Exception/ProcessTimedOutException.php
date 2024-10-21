@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Zjwshisb\ProcessManager\Exception;
 
+use Symfony\Component\Process\Exception\ProcessTimedOutException as BaseProcessTimedOutException;
 use Symfony\Component\Process\Exception\RuntimeException;
 use Zjwshisb\ProcessManager\Process\ProcessInterface;
-use Symfony\Component\Process\Exception\ProcessTimedOutException as BaseProcessTimedOutException;
 
 class ProcessTimedOutException extends RuntimeException
 {
     private ProcessInterface $process;
+
     private int $timeoutType;
 
     public function __construct(ProcessInterface $process, int $timeoutType)
@@ -25,28 +26,19 @@ class ProcessTimedOutException extends RuntimeException
         ));
     }
 
-    /**
-     * @return ProcessInterface
-     */
     public function getProcess(): ProcessInterface
     {
         return $this->process;
     }
 
-    /**
-     * @return bool
-     */
     public function isGeneralTimeout(): bool
     {
-        return BaseProcessTimedOutException::TYPE_GENERAL === $this->timeoutType;
+        return $this->timeoutType === BaseProcessTimedOutException::TYPE_GENERAL;
     }
 
-    /**
-     * @return bool
-     */
     public function isIdleTimeout(): bool
     {
-        return BaseProcessTimedOutException::TYPE_IDLE === $this->timeoutType;
+        return $this->timeoutType === BaseProcessTimedOutException::TYPE_IDLE;
     }
 
     public function getExceededTimeout(): ?float

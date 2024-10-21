@@ -17,6 +17,7 @@ use Zjwshisb\ProcessManager\Process\ProcessInterface;
  * @method $this onSuccess(callable $callback)
  * @method $this onTimeout(callable $callback)
  * @method $this onError(callable $callback)
+ *
  * @template-implements  IteratorAggregate<int, ProcessInterface>
  * /
  */
@@ -25,17 +26,14 @@ class Job implements IteratorAggregate
     /**
      * @var array<int, ProcessInterface>|null
      */
-    protected array|null $processes = null;
+    protected ?array $processes = null;
 
     protected int $processCount = 1;
 
-    public function __construct(protected ProcessInterface $process)
-    {
-
-    }
+    public function __construct(protected ProcessInterface $process) {}
 
     /**
-     * @param int<0, 99999> $count
+     * @param  int<0, 99999>  $count
      * @return $this
      */
     public function setProcessCount(int $count): static
@@ -44,9 +42,9 @@ class Job implements IteratorAggregate
             throw new InvalidArgumentException('Process Count must be greater than 0');
         }
         $this->processCount = $count;
+
         return $this;
     }
-
 
     /**
      * @return string[]
@@ -54,11 +52,11 @@ class Job implements IteratorAggregate
     protected function allowMethods(): array
     {
         return [
-            "setTimeout",
-            "setRunTimes",
-            "onSuccess",
-            "onError",
-            "onTimeout"
+            'setTimeout',
+            'setRunTimes',
+            'onSuccess',
+            'onError',
+            'onTimeout',
         ];
     }
 
@@ -67,7 +65,7 @@ class Job implements IteratorAggregate
      */
     public function getIterator(): Traversable
     {
-        if ($this->processes === null || sizeof($this->processes) !== $this->processCount) {
+        if ($this->processes === null || count($this->processes) !== $this->processCount) {
             $processes = [];
             for ($i = 1; $i <= $this->processCount; $i++) {
                 $p = clone $this->process;
@@ -76,20 +74,21 @@ class Job implements IteratorAggregate
             }
             $this->processes = $processes;
         }
+
         return new ArrayIterator($this->processes);
     }
 
     /**
-     * @param string $name
-     * @param array<string> $arguments
+     * @param  array<string>  $arguments
      * @return $this
      */
     public function __call(string $name, array $arguments): static
     {
         if (in_array($name, $this->allowMethods())) {
             $this->process->$name(...$arguments);
+
             return $this;
         }
-        throw new BadMethodCallException("Call to undefined method " . __CLASS__ . "::" . $name . "()");
+        throw new BadMethodCallException('Call to undefined method '.__CLASS__.'::'.$name.'()');
     }
 }

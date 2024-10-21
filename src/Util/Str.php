@@ -14,6 +14,7 @@ class Str
         for ($i = 0; $i < $length; $i++) {
             $string .= $characters[rand(0, $charactersLength - 1)];
         }
+
         return $string;
     }
 }

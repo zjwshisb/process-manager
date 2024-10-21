@@ -16,33 +16,31 @@ use Zjwshisb\ProcessManager\Process\ProcProcess;
 
 class Manager
 {
-    /**
-     * manager identified name
-     * @var string|null
-     */
-    protected string|null $name = null;
+    protected string $status = 'ready';
 
     /**
      * processes which is running
+     *
      * @var array<ProcessInterface>
      */
     protected array $runningProcesses = [];
 
     /**
      * processes which is running
+     *
      * @var array<ProcessInterface>
      */
     protected array $restartProcesses = [];
 
     /**
      * processes waiting to start
+     *
      * @var array<Job>
      */
     protected array $jobs = [];
 
     /**
      * psr-3 logger
-     * @var LoggerInterface
      */
     protected LoggerInterface $logger;
 
@@ -79,6 +77,7 @@ class Manager
 
     /**
      * default config
+     *
      * @return array{
      *      name: string,
      *      logger: array{
@@ -90,16 +89,17 @@ class Manager
     protected function getDefaultConfig(): array
     {
         return [
-            "name" => "PHP Process Manager",
-            "logger" => [
-                "level" => LogLevel::INFO
+            'name' => 'PHP Process Manager',
+            'logger' => [
+                'level' => LogLevel::INFO,
             ],
-            "runtime" => __DIR__ . "/runtime"
+            'runtime' => __DIR__.'/runtime',
         ];
     }
 
     /**
      * Init default logger
+     *
      * @return $this
      */
     protected function initLogger(): static
@@ -110,105 +110,96 @@ class Manager
             $this->logger = $loggerConfig;
         } elseif (is_array($loggerConfig)) {
             $runtime = $config['runtime'];
-            $logFile = $runtime . "/process.log";
-            $logger = new Logger("process-manager");
+            $logFile = $runtime.'/process.log';
+            $logger = new Logger($this->config['name']);
             $level = $loggerConfig['level'];
             $logger->pushHandler(new StreamHandler($logFile, $level));
             $this->setLogger($logger);
         }
+
         return $this;
     }
 
     /**
      * Set psr-3 logger
-     * @param LoggerInterface $logger
-     * @return static
      */
     public function setLogger(LoggerInterface $logger): static
     {
         $this->logger = $logger;
+
         return $this;
     }
 
     /**
      * Add CMD Job
-     * @param array<string> $cmd
-     * @return ProcJob
+     *
+     * @param  array<string>  $cmd
      */
     public function spawnCmd(array $cmd): ProcJob
     {
         $job = new ProcJob(new ProcProcess($cmd));
         $this->jobs[] = $job;
+
         return $job;
     }
 
     /**
      * Add PHP Process
-     * @param callable $callback
-     * @return PcntlJob
      */
     public function spawnPhp(callable $callback): PcntlJob
     {
-        if (!is_callable($callback)) {
+        if (! is_callable($callback)) {
             throw new LogicException('Params callback must can be called as a function');
         }
         $job = new PcntlJob(new PcntlProcess($callback));
         $this->jobs[] = $job;
+
         return $job;
     }
 
     /**
-     * @param ProcessInterface $process
      * @return $this
      */
     protected function addRestartProcess(ProcessInterface $process): static
     {
-        if ($process->needRestart()) {
+        if ($process->needRestart() && $this->status === 'running') {
             $this->restartProcesses[] = $process;
         }
+
         return $this;
     }
 
-
     /**
      *  Process success callback
-     * @param ProcessInterface $process
-     * @return void
      */
     protected function handleProcessSuccess(ProcessInterface $process): void
     {
-        $this->logger->info($this->getProcessTag($process, "Down"), $process->getInfo(true));
+        $this->logger->info($this->getProcessTag($process, 'Down'), $process->getInfo(true));
         $process->triggerSuccessEvent();
         $this->addRestartProcess($process);
     }
 
     /**
      * Process timeout callback
-     * @param ProcessInterface $process
-     * @param ProcessTimedOutException $exception
-     * @return void
      */
     protected function handleProcessTimeout(ProcessInterface $process, ProcessTimedOutException $exception): void
     {
-        $this->logger->info($this->getProcessTag($process, "Timeout"), $process->getInfo(true));
+        $this->logger->info($this->getProcessTag($process, 'Timeout'), $process->getInfo(true));
         $process->triggerTimeoutEvent();
         $this->addRestartProcess($process);
     }
 
-
     /**
      * Handle error process
-     * @param ProcessInterface $process
-     * @return void
      */
     protected function handleProcessError(ProcessInterface $process): void
     {
         $this->logger->error(
-            $this->getProcessTag($process, "Error"),
+            $this->getProcessTag($process, 'Error'),
             array_merge(
                 $process->getInfo(true),
                 [
-                    "error" => $process->getErrorOutput()
+                    'error' => $process->getErrorOutput(),
                 ]
             )
         );
@@ -218,21 +209,22 @@ class Manager
 
     /**
      * Manager end
-     * @return void
      */
     protected function end(): void
     {
-        $this->logger->info("End Manager");
+        $this->logger->info('End Manager');
     }
 
-    public function exit(): void
+    public function exit(int $signal = 0): void
     {
+        $this->status = 'exiting';
         $this->stopProcesses();
-        exit;
+        echo 'exit by signal '.$signal.PHP_EOL;
     }
 
     /**
      * Start processes
+     *
      * @return $this
      */
     protected function startProcesses(): static
@@ -241,14 +233,16 @@ class Manager
             foreach ($job as $process) {
                 $process->start();
                 $this->runningProcesses[] = $process;
-                $this->logger->info($this->getProcessTag($process, "start"), $process->getInfo());
+                $this->logger->info($this->getProcessTag($process, 'start'), $process->getInfo());
             }
         }
+
         return $this;
     }
 
     /**
      * Restart processes
+     *
      * @return $this
      */
     protected function restartProcesses(): static
@@ -257,15 +251,15 @@ class Manager
             $process = $process->restart();
             $pid = $process->getPid();
             $this->runningProcesses[$pid] = $process;
-            $this->logger->info($this->getProcessTag($process, "restart"), $process->getInfo());
+            $this->logger->info($this->getProcessTag($process, 'restart'), $process->getInfo());
         }
         $this->restartProcesses = [];
+
         return $this;
     }
 
     /**
      * Stop all processes
-     * @return void
      */
     public function stopProcesses(): void
     {
@@ -276,7 +270,6 @@ class Manager
 
     /**
      * Register Signal Handler
-     * @return void
      */
     protected function registerSignalHandler(): void
     {
@@ -285,51 +278,47 @@ class Manager
         pcntl_signal(SIGTSTP, [$this, 'exit']);
     }
 
-
-    /**
-     * @param ProcessInterface $process
-     * @param string $action
-     * @return string
-     */
     protected function getProcessTag(ProcessInterface $process, string $action): string
     {
-        return sprintf("Process[%s][%d] %s", $process->getUid(), $process->getCurrentRunTimes(), $action);
+        return sprintf('Process[%s][%d] %s', $process->getUid(), $process->getCurrentRunTimes(), $action);
     }
 
     /**
      * Start Manager
-     * @return void
      */
     public function start(): void
     {
-        $this->logger->info("Start Manager");
+        $this->status = 'running';
+        $this->logger->info('Start Manager');
         $this->registerSignalHandler();
         $this->startProcesses();
         $sleepTime = 100000;
         while (true) {
             $this->runningProcesses = array_filter($this->runningProcesses, function (ProcessInterface $process) {
-                if (!$process->isRunning()) {
-                    echo "haha";
+                if (! $process->isRunning()) {
                     if ($process->isSuccessful()) {
                         $this->handleProcessSuccess($process);
                     } else {
                         $this->handleProcessError($process);
                     }
+
                     return false;
                 } else {
                     try {
                         $process->checkTimeout();
                     } catch (ProcessTimedOutException $exception) {
                         $this->handleProcessTimeout($process, $exception);
+
                         return false;
                     }
                 }
+
                 return true;
             });
-            if (sizeof($this->restartProcesses) > 0) {
+            if (count($this->restartProcesses) > 0) {
                 $this->restartProcesses();
             }
-            if (sizeof($this->runningProcesses) === 0) {
+            if (count($this->runningProcesses) === 0) {
                 break;
             }
             pcntl_signal_dispatch();

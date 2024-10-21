@@ -14,8 +14,7 @@ class ProcJob extends Job
     protected function allowMethods(): array
     {
         return array_merge(parent::allowMethods(), [
-            "setEnv", "setInput", "setWorkingDirectory"
+            'setEnv', 'setInput', 'setWorkingDirectory',
         ]);
     }
-
 }

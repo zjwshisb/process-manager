@@ -14,29 +14,28 @@ use Zjwshisb\ProcessManager\Process\Traits\WithEndTime;
 
 class ProcProcess extends SymfonyProcess implements ProcessInterface
 {
-    use WithEndTime;
-    use Repeatable;
-    use HasUid;
     use Event;
+    use HasUid;
+    use Repeatable;
+    use WithEndTime;
 
     public function getInfo($withExit = false): array
     {
         $info = [
-            "cmd" => $this->getCommandLine(),
-            "type" => "proc",
-            "pid" => $this->getPid(),
+            'cmd' => $this->getCommandLine(),
+            'type' => 'proc',
+            'pid' => $this->getPid(),
         ];
         if ($withExit) {
-            $info["exit code"] = $this->getExitCode();
+            $info['exit code'] = $this->getExitCode();
             $info['exit text'] = $this->getExitCodeText();
         }
+
         return $info;
     }
 
     /**
-     * @param callable|null $callback
-     * @param array<string> $env
-     * @return void
+     * @param  array<string>  $env
      */
     public function start(?callable $callback = null, array $env = []): void
     {

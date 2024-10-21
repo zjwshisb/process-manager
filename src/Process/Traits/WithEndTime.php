@@ -10,7 +10,6 @@ trait WithEndTime
 
     /**
      * set process terminate time
-     * @return void
      */
     public function updateEndTime(): void
     {
@@ -21,24 +20,22 @@ trait WithEndTime
 
     /**
      * Get end time
-     * @return float
      */
     public function getEndTime(): float
     {
         if ($this->isTerminated() || $this->endTime === null) {
-            throw new LogicException("End time is only available after process terminated.");
+            throw new LogicException('End time is only available after process terminated.');
         }
+
         return $this->endTime;
     }
 
-    /**
-     * @return float
-     */
     public function getDurationTime(): float
     {
         if ($this->isTerminated()) {
-            throw new LogicException("duration time is only available after process terminated.");
+            throw new LogicException('duration time is only available after process terminated.');
         }
+
         return $this->getEndTime() - $this->getStartTime();
     }
 }
