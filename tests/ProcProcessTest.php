@@ -14,7 +14,7 @@ class ProcProcessTest extends TestCase
     {
         $manager = new Manager;
         $count = 0;
-        $manager->spawnCmd(['echo', "1"])
+        $manager->spawnCmd(['echo', '1'])
             ->setProcessCount(10)
             ->onSuccess(function (ProcessInterface $process) use (&$count) {
                 $count += intval($process->getOutput());
@@ -27,7 +27,7 @@ class ProcProcessTest extends TestCase
     {
         $manager = new Manager;
         $count = 0;
-        $manager->spawnCmd(['echo', "1"])
+        $manager->spawnCmd(['echo', '1'])
             ->setRunTimes(10)
             ->onSuccess(function (ProcessInterface $process) use (&$count) {
                 $count += intval($process->getOutput());
@@ -40,7 +40,7 @@ class ProcProcessTest extends TestCase
     {
         $manager = new Manager;
         $count = 0;
-        $manager->spawnCmd(['echo', "1"])
+        $manager->spawnCmd(['echo', '1'])
             ->setRunTimes(10)
             ->setProcessCount(10)
             ->onSuccess(function (ProcessInterface $process) use (&$count) {

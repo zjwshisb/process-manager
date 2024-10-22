@@ -15,7 +15,7 @@ class PcntlProcessTest extends TestCase
         $manager = new Manager;
         $count = 0;
         $manager->spawnPhp(function () use (&$resp) {
-           return 1;
+            return 1;
         })
             ->setProcessCount(10)
             ->onSuccess(function (PcntlProcess $process) use (&$count) {
@@ -57,7 +57,7 @@ class PcntlProcessTest extends TestCase
     {
         $manager = new Manager;
         $manager->spawnPhp(function () {
-            throw new \RuntimeException("test");
+            throw new \RuntimeException('test');
         })->onError(function (PcntlProcess $process) {
             $this->assertNotEmpty($process->getErrorOutput());
         })->onSuccess(function () {
