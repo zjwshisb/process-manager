@@ -10,6 +10,11 @@ with [symfony/process](https://github.com/symfony/process) package.
 * ext-posix
 * Linux/Macos
 
+### Composer
+```shell
+composer require zjwshisb/process-manager:1.0
+```
+
 ## Usage
 
 Basic usage:
