@@ -111,7 +111,6 @@ class PcntlProcess implements ProcessInterface
     {
         cli_set_process_title('php pcntl process worker');
         fclose($sockets[0]);
-        // reset random seeder
         mt_srand(posix_getpid());
         $exitCode = 0;
         try {
@@ -202,7 +201,6 @@ class PcntlProcess implements ProcessInterface
         }
         $this->exitcode = $this->processInformation['exitcode'] ?? -1;
         $this->status = Process::STATUS_TERMINATED;
-        $this->updateEndTime();
         if ($this->exitcode === -1) {
             if (! empty($this->processInformation['signaled'])
                 && isset($this->processInformation['termsig'])
@@ -256,7 +254,7 @@ class PcntlProcess implements ProcessInterface
         return '';
     }
 
-    public function getErrorOutput(): string
+    public function getErrorOutput(): mixed
     {
         if (! $this->isSuccessful()) {
             if ($this->output) {

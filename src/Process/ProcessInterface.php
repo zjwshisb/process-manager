@@ -41,6 +41,11 @@ interface ProcessInterface
     public function getEndTime(): float;
 
     /**
+     * Get Process end time.
+     */
+    public function updateEndTime(): void;
+
+    /**
      * Get Process run time.
      */
     public function getDurationTime(): float;
@@ -57,7 +62,7 @@ interface ProcessInterface
     /**
      * Get the process error output
      */
-    public function getErrorOutput(): string;
+    public function getErrorOutput(): mixed;
 
     /**
      * Get the process successful output

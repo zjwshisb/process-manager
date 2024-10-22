@@ -301,6 +301,7 @@ class Manager
                     } else {
                         $this->handleProcessError($process);
                     }
+                    $process->updateEndTime();
 
                     return false;
                 } else {

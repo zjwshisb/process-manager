@@ -13,53 +13,51 @@ class PcntlProcessTest extends TestCase
     public function testMultipleProcess(): void
     {
         $manager = new Manager;
-        $resp = [];
+        $count = 0;
         $manager->spawnPhp(function () use (&$resp) {
-            $resp[] = '1';
+           return 1;
         })
             ->setProcessCount(10)
-            ->onSuccess(function (PcntlProcess $process) use (&$resp) {
-                $resp[] = $process->getOutput();
+            ->onSuccess(function (PcntlProcess $process) use (&$count) {
+                $count += $process->getOutput();
             });
         $manager->start();
-        $this->assertCount(10, $resp);
+        $this->assertEquals(10, $count);
     }
 
     public function testMultipleCount(): void
     {
         $manager = new Manager;
-        $resp = [];
+        $count = 0;
         $manager->spawnPhp(function () use (&$resp) {
-            $resp[] = '1';
+            return 1;
         })->setRunTimes(10)
-            ->onSuccess(function (PcntlProcess $process) use (&$resp) {
-                $resp[] = $process->getOutput();
+            ->onSuccess(function (PcntlProcess $process) use (&$count) {
+                $count += $process->getOutput();
             });
         $manager->start();
-        $this->assertCount(10, $resp);
+        $this->assertEquals(10, $count);
     }
 
     public function testMultipleProcessCount(): void
     {
         $manager = new Manager;
-        $resp = [];
-        $manager->spawnPhp(function () use (&$resp) {
-            $resp[] = '1';
+        $count = 0;
+        $manager->spawnPhp(function () {
+            return 1;
         })->setRunTimes(10)->setProcessCount(10)
-            ->onSuccess(function (PcntlProcess $process) use (&$resp) {
-                $resp[] = $process->getOutput();
+            ->onSuccess(function (PcntlProcess $process) use (&$count) {
+                $count += $process->getOutput();
             });
         $manager->start();
-        $this->assertCount(100, $resp);
+        $this->assertEquals(100, $count);
     }
 
     public function testError(): void
     {
         $manager = new Manager;
-        $manager->spawnPhp(function () use (&$resp) {
-            $arr = [];
-
-            return $arr[1];
+        $manager->spawnPhp(function () {
+            throw new \RuntimeException("test");
         })->onError(function (PcntlProcess $process) {
             $this->assertNotEmpty($process->getErrorOutput());
         })->onSuccess(function () {

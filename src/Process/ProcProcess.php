@@ -34,21 +34,10 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
         return $info;
     }
 
-    /**
-     * @param  array<string>  $env
-     */
     public function start(?callable $callback = null, array $env = []): void
     {
         parent::start();
         $this->addRunTimes();
-    }
-
-    protected function updateStatus(bool $blocking): void
-    {
-        parent::updateStatus($blocking);
-        if (! $this->isRunning()) {
-            $this->updateEndTime();
-        }
     }
 
     public function checkTimeout(): void
