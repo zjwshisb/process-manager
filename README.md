@@ -20,7 +20,6 @@ composer require zjwshisb/process-manager:1.0
 Basic usage:
 
 ```php
-use \Zjwshisb\ProcessManager\Process\ProcessInterface;
 $manager = new \Zjwshisb\ProcessManager\Manager();
 // or
 $manager = new \Zjwshisb\ProcessManager\Manager([
