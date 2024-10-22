@@ -2,7 +2,8 @@
     "name": "zjwshisb/process-manager",
     "type": "library",
     "description": "A simple php process manager",
-    "version": "1.0.0",
+    "keywords": ["processs manager", "commands", "pcntl", "process"],
+    "version": "1.0.1",
     "license": "MIT",
     "autoload": {
         "psr-4": {

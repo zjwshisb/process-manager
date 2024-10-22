@@ -36,6 +36,10 @@ $manager->setLogger(new Monolog\Logger())
 $manager->spawnPhp(function () {return "hello world"})
 // executes commands.
 $manager->spawnCmd(["echo", "hello world"])
+        // below methods only support in spawnCmd
+        // ->setEnv()
+        // ->setInput()
+        // ->setWorkingDirectory()
 // start all process
 $manager->start();
 ```
@@ -74,10 +78,10 @@ $manager = new \Zjwshisb\ProcessManager\Manager();
 // set timeout, default 60 seconds.
 // spawnCmd is the same usage.
 $manager->spawnPhp(function () {sleep(10);})
-        // set timeout, default to 60.
+        //set timeout, default to 60.
         ->setTimeout(5)
         ->onTimeout(function () {
-            // any things to do with timeout
+            //any things to do after timeout
         })
 $manager->start();
 ```
@@ -132,3 +136,6 @@ $manager->spawnPhp(function () {echo  1 . PHP_EOL;})
 $manager->start();
 ```
 
+## License
+
+MIT
