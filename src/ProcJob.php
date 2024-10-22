@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zjwshisb\ProcessManager;
 
 /**
+ * a proc process proxy
  * @method $this setEnv(array $env)
  * @method $this setInput($input)
  * @method $this setWorkingDirectory(string $cwd)

@@ -3,6 +3,7 @@
     "type": "library",
     "description": "A simple php process manager",
     "keywords": ["processs manager", "commands", "pcntl", "process"],
+    "homepage": "https://github.com/zjwshisb/process-manager",
     "version": "1.0.4",
     "license": "MIT",
     "autoload": {
@@ -18,7 +19,8 @@
     "authors": [
         {
             "name": "zhoujianwei",
-            "email": "361340272@qq.com"
+            "email": "361340272@qq.com",
+            "homepage": "https://github.com/zjwshisb"
         }
     ],
     "require": {

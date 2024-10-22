@@ -12,74 +12,63 @@ trait Event
     /**
      * @var array<string, array<callable|callable-string>>
      */
-    protected array $events = [];
+    protected array $listeners = [];
 
-    public function triggerSuccessEvent(): static
+    public function triggerSuccessListeners(): static
     {
-        $callbacks = $this->getEventCallbacks('success');
-        if (count($callbacks) > 0) {
-            foreach ($callbacks as $event) {
-                call_user_func($event, $this, $this->getOutput());
-            }
-        }
-
-        return $this;
+        return $this->trigger("success");
     }
 
-    public function triggerErrorEvent(): static
+    public function triggerErrorListeners(): static
     {
-        $callbacks = $this->getEventCallbacks('error');
-        if (count($callbacks) > 0) {
-            foreach ($callbacks as $event) {
-                call_user_func($event, $this, $this->getOutput());
-            }
-        }
-
-        return $this;
+       return $this->trigger("error");
     }
 
-    public function triggerTimeoutEvent(): static
+    public function triggerTimeoutListeners(): static
     {
-        $callbacks = $this->getEventCallbacks('timeout');
-        if (count($callbacks) > 0) {
-            foreach ($callbacks as $event) {
-                call_user_func($event, $this);
-            }
-        }
-
-        return $this;
+       return $this->trigger("timeout");
     }
 
     public function onSuccess(callable $callback): static
     {
-        return $this->addEvent('success', $callback);
+        return $this->attachListener('success', $callback);
     }
 
     public function onTimeout(callable $callback): static
     {
-        return $this->addEvent('timeout', $callback);
+        return $this->attachListener('timeout', $callback);
     }
 
     public function onError(callable $callback): static
     {
-        return $this->addEvent('error', $callback);
+        return $this->attachListener('error', $callback);
     }
 
     /**
      * @return array<callable|callable-string>
      */
-    private function getEventCallbacks(string $event): array
+    private function getListeners(string $event): array
     {
-        return $this->events[$event] ?? [];
+        return $this->listeners[$event] ?? [];
     }
 
-    private function addEvent(string $event, callable $callback): static
+    private function trigger(string $event): static
     {
-        if (! isset($this->events[$event])) {
-            $this->events[$event] = [];
+        $listeners = $this->getListeners($event);
+        if (!empty($listeners) > 0) {
+            foreach ($listeners as $listener) {
+                call_user_func($listener, $this);
+            }
         }
-        $this->events[$event][] = $callback;
+        return $this;
+    }
 
+    private function attachListener(string $event, callable $callback): static
+    {
+        if (! isset($this->listeners[$event])) {
+            $this->listeners[$event] = [];
+        }
+        $this->listeners[$event][] = $callback;
         return $this;
     }
 }

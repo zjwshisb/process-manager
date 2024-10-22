@@ -175,7 +175,7 @@ class Manager
     protected function handleProcessSuccess(ProcessInterface $process): void
     {
         $this->logger->info($this->getProcessTag($process, 'Down'), $process->getInfo(true));
-        $process->triggerSuccessEvent();
+        $process->triggerSuccessListeners();
         $this->addRestartProcess($process);
     }
 
@@ -185,7 +185,7 @@ class Manager
     protected function handleProcessTimeout(ProcessInterface $process, ProcessTimedOutException $exception): void
     {
         $this->logger->info($this->getProcessTag($process, 'Timeout'), $process->getInfo(true));
-        $process->triggerTimeoutEvent();
+        $process->triggerTimeoutListeners();
         $this->addRestartProcess($process);
     }
 
@@ -203,7 +203,7 @@ class Manager
                 ]
             )
         );
-        $process->triggerErrorEvent();
+        $process->triggerErrorListeners();
         $this->addRestartProcess($process);
     }
 

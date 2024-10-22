@@ -132,15 +132,15 @@ interface ProcessInterface
     /**
      * trigger success event handle
      */
-    public function triggerSuccessEvent(): static;
+    public function triggerSuccessListeners(): static;
 
     /**
      * trigger error event handle
      */
-    public function triggerErrorEvent(): static;
+    public function triggerErrorListeners(): static;
 
     /**
      * trigger timeout event handle
      */
-    public function triggerTimeoutEvent(): static;
+    public function triggerTimeoutListeners(): static;
 }
