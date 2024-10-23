@@ -4,7 +4,7 @@
     "description": "A simple php process manager",
     "keywords": ["processs manager", "commands", "pcntl", "process"],
     "homepage": "https://github.com/zjwshisb/process-manager",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "license": "MIT",
     "autoload": {
         "psr-4": {

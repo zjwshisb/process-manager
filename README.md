@@ -75,9 +75,9 @@ Set timeout:
 $manager = new \Zjwshisb\ProcessManager\Manager();
 
 // set timeout, default 60 seconds.
+// set to 0 mean no timeout.
 // spawnCmd is the same usage.
 $manager->spawnPhp(function () {sleep(10);})
-        //set timeout, default to 60.
         ->setTimeout(5)
         ->onTimeout(function () {
             //any things to do after timeout

@@ -70,12 +70,18 @@ class PcntlProcess implements ProcessInterface
     public function __construct(callable $callback)
     {
         $this->callback = $callback;
+        $this->setTimeout(60);
     }
 
     public function setTimeout(float $timeout): static
     {
-        $this->timeout = $timeout;
-
+        if ($timeout === 0.0) {
+            $this->timeout = null;
+        } else if ($timeout < 0) {
+            throw new LogicException('A timeout value less than 0 is not valid.');
+        } else {
+            $this->timeout = $timeout;
+        }
         return $this;
     }
 
