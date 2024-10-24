@@ -38,7 +38,6 @@ class ProcProcessTest extends TestCase
     public function testMultipleProcessCount(): void
     {
         $manager = new Manager;
-        $manager->setLogger();
         $count = 0;
         $manager->spawnCmd(['echo', '1'])->setRunTimes(10)->setProcessCount(10)
             ->onSuccess(function (ProcessInterface $process) use (&$count) {

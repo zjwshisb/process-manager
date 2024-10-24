@@ -44,7 +44,6 @@ class PcntlProcessTest extends TestCase
     public function testMultipleProcessCount(): void
     {
         $manager = new Manager;
-        $manager->setLogger();
         $count = 0;
         $manager->spawnPhp(function () {
             return 1;
