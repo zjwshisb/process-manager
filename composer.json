@@ -37,9 +37,10 @@
     },
     "scripts": {
         "post-merge": "composer install",
-        "phpstan": "phpstan analyse --memory-limit=-1",
+        "phpstan": "vendor/bin/phpstan analyse --memory-limit=-1",
         "check-style": "vendor/bin/pint --test",
         "fix-style": "vendor/bin/pint",
+        "coverage": "vendor/bin/phpunit --coverage-clover coverage.xml",
         "test": "phpunit --colors"
     }
 }

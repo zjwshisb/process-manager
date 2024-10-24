@@ -77,11 +77,12 @@ class PcntlProcess implements ProcessInterface
     {
         if ($timeout === 0.0) {
             $this->timeout = null;
-        } else if ($timeout < 0) {
+        } elseif ($timeout < 0) {
             throw new LogicException('A timeout value less than 0 is not valid.');
         } else {
             $this->timeout = $timeout;
         }
+
         return $this;
     }
 
@@ -123,7 +124,7 @@ class PcntlProcess implements ProcessInterface
             $result = call_user_func($this->callback, $this);
         } catch (Throwable $throwable) {
             $result = $throwable->getMessage();
-            $exitCode = 2;
+            $exitCode = 1;
         }
         if ($result) {
             fwrite($sockets[1], serialize($result));
@@ -176,6 +177,17 @@ class PcntlProcess implements ProcessInterface
         return $this->processInformation['pid'] ?? null;
     }
 
+    /**
+     * @return array{
+     *     type: string,
+     *     pid: int|null,
+     * }|array{
+     *     type: string,
+     *     pid: int|null,
+     *     exitCode: int|null,
+     *     exitText: string|null
+     * }
+     */
     public function getInfo(bool $withExit = false): array
     {
         $info = [
@@ -183,8 +195,8 @@ class PcntlProcess implements ProcessInterface
             'pid' => $this->getPid(),
         ];
         if ($withExit) {
-            $info['exit code'] = $this->getExitCode();
-            $info['exit text'] = $this->getExitCodeText();
+            $info['exitCode'] = $this->getExitCode();
+            $info['exitText'] = $this->getExitCodeText();
         }
 
         return $info;
@@ -341,7 +353,7 @@ class PcntlProcess implements ProcessInterface
 
     public function getCommandLine(): ?string
     {
-        return null;
+        return '';
     }
 
     public function isStarted(): bool
@@ -373,7 +385,7 @@ class PcntlProcess implements ProcessInterface
 
     public function getStartTime(): float
     {
-        if ($this->isStarted() || is_null($this->starttime)) {
+        if (! $this->isStarted() || is_null($this->starttime)) {
             throw new LogicException('Start time is only available after process start.');
         }
 

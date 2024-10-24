@@ -44,6 +44,6 @@ trait Repeatable
             return true;
         }
 
-        return $this->currentRunTimes < $this->runTimes;
+        return $this->getCurrentRunTimes() < $this->runTimes;
     }
 }

@@ -19,7 +19,20 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
     use Repeatable;
     use WithEndTime;
 
-    public function getInfo($withExit = false): array
+    /**
+     * @return array{
+     *     cmd: string,
+     *     type: string,
+     *     pid: int|null,
+     *     exitCode: int|null,
+     *     exitText: string|null
+     * }| array{
+     *     cmd: string,
+     *     type: string,
+     *     pid: int|null,
+     * }
+     */
+    public function getInfo(bool $withExit = false): array
     {
         $info = [
             'cmd' => $this->getCommandLine(),
@@ -27,16 +40,19 @@ class ProcProcess extends SymfonyProcess implements ProcessInterface
             'pid' => $this->getPid(),
         ];
         if ($withExit) {
-            $info['exit code'] = $this->getExitCode();
-            $info['exit text'] = $this->getExitCodeText();
+            $info['exitCode'] = $this->getExitCode();
+            $info['exitText'] = $this->getExitCodeText();
         }
 
         return $info;
     }
 
+    /**
+     * @param  array<string>  $env
+     */
     public function start(?callable $callback = null, array $env = []): void
     {
-        parent::start();
+        parent::start($callback, $env);
         $this->addRunTimes();
     }
 

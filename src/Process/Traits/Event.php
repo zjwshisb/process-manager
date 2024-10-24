@@ -16,17 +16,17 @@ trait Event
 
     public function triggerSuccessListeners(): static
     {
-        return $this->trigger("success");
+        return $this->trigger('success');
     }
 
     public function triggerErrorListeners(): static
     {
-       return $this->trigger("error");
+        return $this->trigger('error');
     }
 
     public function triggerTimeoutListeners(): static
     {
-       return $this->trigger("timeout");
+        return $this->trigger('timeout');
     }
 
     public function onSuccess(callable $callback): static
@@ -55,11 +55,12 @@ trait Event
     private function trigger(string $event): static
     {
         $listeners = $this->getListeners($event);
-        if (!empty($listeners) > 0) {
+        if (! empty($listeners) > 0) {
             foreach ($listeners as $listener) {
                 call_user_func($listener, $this);
             }
         }
+
         return $this;
     }
 
@@ -69,6 +70,7 @@ trait Event
             $this->listeners[$event] = [];
         }
         $this->listeners[$event][] = $callback;
+
         return $this;
     }
 }

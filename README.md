@@ -22,15 +22,10 @@ Basic usage:
 ```php
 $manager = new \Zjwshisb\ProcessManager\Manager();
 // or
-$manager = new \Zjwshisb\ProcessManager\Manager([
-  "name" => "PHP Process Manager",
-  "runtime" => "/var/log/",
-  "logger" => [
-     "level" => \Psr\Log\LogLevel::ERROR
-  ]
-]);
+$manager = new \Zjwshisb\ProcessManager\Manager("PHP Process Manager", "/var/runtime/", 100 * 1000);
 // custom logger setting, any instance implement Psr\Log\LoggerInterface support
-$manager->setLogger(new Monolog\Logger())
+// if null mean set to Monolog\Logger
+$manager->setLogger()
 // executes the php callback.
 $manager->spawnPhp(function () {return "hello world"})
 // executes commands.

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Zjwshisb\ProcessManager;
 
 use Monolog\Handler\StreamHandler;
+use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
 use Symfony\Component\Process\Exception\LogicException;
 use Zjwshisb\ProcessManager\Exception\ProcessTimedOutException;
 use Zjwshisb\ProcessManager\Process\PcntlProcess;
@@ -16,7 +16,11 @@ use Zjwshisb\ProcessManager\Process\ProcProcess;
 
 class Manager
 {
-    protected string $status = 'ready';
+    protected string $name;
+
+    protected string $runtime;
+
+    protected string $status = self::STATUS_READY;
 
     /**
      * processes which is running
@@ -39,95 +43,46 @@ class Manager
      */
     protected array $jobs = [];
 
-    /**
-     * psr-3 logger
-     */
-    protected LoggerInterface $logger;
+    protected ?LoggerInterface $logger = null;
+
+    protected int $sleepTime;
+
+    const STATUS_READY = 'ready';
+
+    const STATUS_RUNNING = 'running';
+
+    const STATUS_EXITING = 'exiting';
 
     /**
-     * @var array{
-     *     name: string,
-     *     logger: LoggerInterface | array{
-     *         level: LogLevel
-     *     },
-     *     runtime: string
-     * } $config
+     * @param  string  $name  identified name
+     * @param  string  $runtime  dir to save log
+     * @param  int  $sleepTime  sleep time in microseconds
      */
-    protected array $config;
-
-    /**
-     * @param array{
-     *     name?: string,
-     *     logger?: LoggerInterface | array{
-     *         level: LogLevel
-     *     },
-     *     runtime?: string
-     * }|null $config
-     */
-    public function __construct(?array $config = null)
+    public function __construct(string $name = 'PHP Process Manager', string $runtime = '', int $sleepTime = 100000)
     {
-        $defaultConfig = $this->getDefaultConfig();
-        if ($config) {
-            $defaultConfig = array_merge($defaultConfig, $config);
-        }
-        $this->config = $defaultConfig;
-        $this->initLogger();
-        cli_set_process_title($this->config['name']);
+        $this->name = $name;
+        $this->runtime = $runtime;
+        $this->sleepTime = $sleepTime;
+        cli_set_process_title($this->name);
     }
 
     /**
-     * default config
-     *
-     * @return array{
-     *      name: string,
-     *      logger: array{
-     *          level: LogLevel
-     *      },
-     *      runtime: string
-     *  }
-     */
-    protected function getDefaultConfig(): array
-    {
-        return [
-            'name' => 'PHP Process Manager',
-            'logger' => [
-                'level' => LogLevel::INFO,
-            ],
-            'runtime' => __DIR__.'/runtime',
-        ];
-    }
-
-    /**
-     * Init default logger
-     *
      * @return $this
      */
-    protected function initLogger(): static
+    public function setLogger(?LoggerInterface $logger = null): static
     {
-        $config = $this->config;
-        $loggerConfig = $config['logger'];
-        if ($loggerConfig instanceof LoggerInterface) {
-            $this->logger = $loggerConfig;
-        } elseif (is_array($loggerConfig)) {
-            $runtime = $config['runtime'];
-            $logFile = $runtime.'/process.log';
-            $logger = new Logger($this->config['name']);
-            $level = $loggerConfig['level'];
-            $logger->pushHandler(new StreamHandler($logFile, $level));
-            $this->setLogger($logger);
+        if (! $logger) {
+            $logger = new Logger($this->name);
+            $logger->pushHandler(new StreamHandler($this->runtime.'/process.log', Level::Info));
         }
-
-        return $this;
-    }
-
-    /**
-     * Set psr-3 logger
-     */
-    public function setLogger(LoggerInterface $logger): static
-    {
         $this->logger = $logger;
 
         return $this;
+    }
+
+    public function getLogger(): ?LoggerInterface
+    {
+        return $this->logger;
     }
 
     /**
@@ -162,7 +117,7 @@ class Manager
      */
     protected function addRestartProcess(ProcessInterface $process): static
     {
-        if ($process->needRestart() && $this->status === 'running') {
+        if ($process->needRestart() && $this->status === self::STATUS_RUNNING) {
             $this->restartProcesses[] = $process;
         }
 
@@ -174,7 +129,7 @@ class Manager
      */
     protected function handleProcessSuccess(ProcessInterface $process): void
     {
-        $this->logger->info($this->getProcessTag($process, 'Down'), $process->getInfo(true));
+        $this->logger?->info($this->getProcessTag($process, 'Down'), $process->getInfo(true));
         $process->triggerSuccessListeners();
         $this->addRestartProcess($process);
     }
@@ -182,9 +137,9 @@ class Manager
     /**
      * Process timeout callback
      */
-    protected function handleProcessTimeout(ProcessInterface $process, ProcessTimedOutException $exception): void
+    protected function handleProcessTimeout(ProcessInterface $process): void
     {
-        $this->logger->info($this->getProcessTag($process, 'Timeout'), $process->getInfo(true));
+        $this->logger?->info($this->getProcessTag($process, 'Timeout'), $process->getInfo(true));
         $process->triggerTimeoutListeners();
         $this->addRestartProcess($process);
     }
@@ -194,7 +149,7 @@ class Manager
      */
     protected function handleProcessError(ProcessInterface $process): void
     {
-        $this->logger->error(
+        $this->logger?->error(
             $this->getProcessTag($process, 'Error'),
             array_merge(
                 $process->getInfo(true),
@@ -212,12 +167,12 @@ class Manager
      */
     protected function end(): void
     {
-        $this->logger->info('End Manager');
+        $this->logger?->info('End Manager');
     }
 
     public function exit(int $signal = 0): void
     {
-        $this->status = 'exiting';
+        $this->status = self::STATUS_EXITING;
         $this->stopProcesses();
         echo 'exit by signal '.$signal.PHP_EOL;
     }
@@ -233,7 +188,7 @@ class Manager
             foreach ($job as $process) {
                 $process->start();
                 $this->runningProcesses[] = $process;
-                $this->logger->info($this->getProcessTag($process, 'start'), $process->getInfo());
+                $this->logger?->info($this->getProcessTag($process, 'start'), $process->getInfo());
             }
         }
 
@@ -251,7 +206,7 @@ class Manager
             $process = $process->restart();
             $pid = $process->getPid();
             $this->runningProcesses[$pid] = $process;
-            $this->logger->info($this->getProcessTag($process, 'restart'), $process->getInfo());
+            $this->logger?->info($this->getProcessTag($process, 'restart'), $process->getInfo());
         }
         $this->restartProcesses = [];
 
@@ -288,27 +243,27 @@ class Manager
      */
     public function start(): void
     {
-        $this->status = 'running';
-        $this->logger->info('Start Manager');
+        $this->status = self::STATUS_RUNNING;
+        $this->logger?->info('Start Manager');
         $this->registerSignalHandler();
         $this->startProcesses();
-        $sleepTime = 100000;
         while (true) {
             $this->runningProcesses = array_filter($this->runningProcesses, function (ProcessInterface $process) {
                 if (! $process->isRunning()) {
+                    $process->updateEndTime();
                     if ($process->isSuccessful()) {
                         $this->handleProcessSuccess($process);
                     } else {
                         $this->handleProcessError($process);
                     }
-                    $process->updateEndTime();
 
                     return false;
                 } else {
                     try {
                         $process->checkTimeout();
                     } catch (ProcessTimedOutException $exception) {
-                        $this->handleProcessTimeout($process, $exception);
+                        $process->updateEndTime();
+                        $this->handleProcessTimeout($process);
 
                         return false;
                     }
@@ -323,7 +278,7 @@ class Manager
                 break;
             }
             pcntl_signal_dispatch();
-            usleep($sleepTime);
+            usleep($this->sleepTime);
         }
         $this->end();
     }

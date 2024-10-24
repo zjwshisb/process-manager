@@ -27,8 +27,7 @@ class ProcProcessTest extends TestCase
     {
         $manager = new Manager;
         $count = 0;
-        $manager->spawnCmd(['echo', '1'])
-            ->setRunTimes(10)
+        $manager->spawnCmd(['echo', '1'])->setRunTimes(10)
             ->onSuccess(function (ProcessInterface $process) use (&$count) {
                 $count += intval($process->getOutput());
             });
@@ -39,10 +38,9 @@ class ProcProcessTest extends TestCase
     public function testMultipleProcessCount(): void
     {
         $manager = new Manager;
+        $manager->setLogger();
         $count = 0;
-        $manager->spawnCmd(['echo', '1'])
-            ->setRunTimes(10)
-            ->setProcessCount(10)
+        $manager->spawnCmd(['echo', '1'])->setRunTimes(10)->setProcessCount(10)
             ->onSuccess(function (ProcessInterface $process) use (&$count) {
                 $count += intval($process->getOutput());
             });
@@ -50,35 +48,88 @@ class ProcProcessTest extends TestCase
         $this->assertEquals(100, $count);
     }
 
-    public function testSuccess(): void
+    public function testError(): void
     {
         $manager = new Manager;
-        $manager->spawnCmd(['echo', 'test'])->onSuccess(function (ProcessInterface $process) {
-            $this->assertEquals('test', trim($process->getOutput()));
+        $manager->spawnCmd(['ls', 'error'])
+            ->onError(function (ProcessInterface $process) {
+                $this->assertTrue(! $process->isSuccessful());
+            })->onSuccess(function () {
+                $this->fail();
+            });
+        $manager->start();
+    }
+
+    public function testGetErrorOutput()
+    {
+        $manager = new Manager;
+        $manager->spawnCmd(['ls', 'error'])->onSuccess(function () {
+            $this->fail();
+        })->onError(function (ProcessInterface $process) {
+            $this->assertTrue((bool) $process->getErrorOutput());
         });
         $manager->start();
     }
 
-    public function testError(): void
+    public function testGetSuccessOutput()
     {
         $manager = new Manager;
-        $manager->spawnCmd(['ls', 'lldwa'])
-            ->onError(function (ProcessInterface $process) {
-                $output = $process->getErrorOutput();
-                $this->assertTrue((bool) $output);
-            });
+        $manager->spawnCmd(['echo', 'hello world'])->onSuccess(function (ProcessInterface $process) {
+            $this->assertEquals('hello world', trim($process->getOutput()));
+        })->onError(function () {
+            $this->fail();
+        });
+        $manager->start();
+    }
+
+    public function testSuccess(): void
+    {
+        $manager = new Manager;
+        $manager->spawnCmd(['echo', 'hello world'])->onSuccess(function (ProcessInterface $process) {
+            $this->assertTrue($process->isSuccessful());
+        })->onError(function () {
+            $this->fail();
+        });
         $manager->start();
     }
 
     public function testTimeout(): void
     {
         $manager = new Manager;
-        $manager->spawnCmd(['sleep', '10'])->setTimeout(6)->onSuccess(function () {
-            $this->fail();
-        })->onError(function () {
-            $this->fail();
-        })->onTimeout(function () {
-            $this->assertTrue(true);
+        $manager->spawnCmd(['sleep', '7'])
+            ->setTimeout(6)->onSuccess(function (ProcessInterface $process) {
+                $this->assertEquals(143, $process->getExitCode());
+            })->onError(function () {
+                $this->fail();
+            })->onTimeout(function () {
+                $this->assertTrue(true);
+            });
+        $manager->start();
+    }
+
+    public function tetGetPid(): void
+    {
+        $manager = new Manager;
+        $manager->spawnCmd(['pwd'])->onSuccess(function (ProcessInterface $process) {
+            $this->assertTrue($process->getPid() > 0);
+        });
+        $manager->start();
+    }
+
+    public function testGetDurationTime()
+    {
+        $manager = new Manager;
+        $manager->spawnCmd(['sleep', '5'])->onSuccess(function (ProcessInterface $process) {
+            $this->assertTrue($process->getDurationTime() >= 5);
+        });
+        $manager->start();
+    }
+
+    public function testGetInfo(): void
+    {
+        $manager = new Manager;
+        $manager->spawnCmd(['pwd'])->onSuccess(function (ProcessInterface $process) {
+            $this->assertEquals('proc', $process->getInfo()['type']);
         });
         $manager->start();
     }
