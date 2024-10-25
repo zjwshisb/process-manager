@@ -116,7 +116,7 @@ class PcntlProcess implements ProcessInterface
      */
     protected function run(array $sockets): void
     {
-        cli_set_process_title('php pcntl process worker');
+        $this->setProcessName('php pcntl process worker');
         fclose($sockets[0]);
         mt_srand(posix_getpid());
         $exitCode = 0;
@@ -299,6 +299,11 @@ class PcntlProcess implements ProcessInterface
         $process->start();
 
         return $process;
+    }
+
+    public function setProcessName(string $name): void
+    {
+        cli_set_process_title($name);
     }
 
     private function resetProcessData(): void

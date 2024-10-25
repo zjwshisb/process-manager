@@ -3,19 +3,70 @@ This package provider an easy way to executes php callable in sub-processes with
 with [symfony/process](https://github.com/symfony/process) package.
 
 <a href="https://github.com/zjwshisb/process-manager/actions">
-<img src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/style.yml?logo=%3D&label=style" />
+<img alt="style" src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/style.yml?logo=%3D&label=style" />
 </a>
 <a href="https://github.com/zjwshisb/process-manager/actions">
-<img src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/tester.yml?logo=%3D&label=test" />
+<img alt="test" src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/tester.yml?logo=%3D&label=test" />
 </a>
 <a href="https://github.com/zjwshisb/process-manager/actions">
-<img src="https://img.shields.io/codecov/c/github/zjwshisb/process-manager" />
+<img alt="phpstan" src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/phpstan.yml??logo=%3D&label=phpstan" />
 </a>
 <a href="https://github.com/zjwshisb/process-manager/actions">
-<img src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/phpstan.yml??logo=%3D&label=phpstan" />
+<img alt="coverage" src="https://img.shields.io/codecov/c/github/zjwshisb/process-manager" />
 </a>
 
 
+## Example
+Setting multiple process to consume job or run shell commands.  
+
+First, white a script like below.
+```php
+// script.php
+$manager = new \Zjwshisb\ProcessManager\Manager();
+$manager->setLogger();
+// setting php callback 
+$manager->spawnPhp(function () {
+  $count = 1;
+  // pseudocode
+  // get job to do 
+  // for Prevent memory leakage, after reach 100 times, exit
+  while ($count <= 100) {
+    if ($job = Queue::getJob()) {
+        $job->handle();
+        $count++;
+    } else {
+      sleep(1);
+    }       
+  }
+})
+// 10 processes to run
+->setProcessCount(10);
+// processes will always restart after exit.
+->setRuntime(0);
+// or execute shell commands,
+$manager->spawnCmd(["shell command"])
+->setProcessCount(10);
+->setRuntime(0);
+// can call spawnPhp/spawnCmd multiple times to add different jobs. 
+$manager->start();
+
+```
+Then, Run the script.php.
+```shell
+/path/to/php scipt.php
+```
+It is better to use supervisor to keep the script alive.  
+
+Supervisor config file like below.
+```
+[program:process-manager]
+command=/path/to/php /path/to/script.php
+autostart=true
+autorestart=true
+stderr_logfile=/path/to/stderr.log
+stdout_logfile=/path/to/stdout.log
+numprocs=1
+```
 
 ## Installation
 

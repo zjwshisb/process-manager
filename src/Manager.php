@@ -58,7 +58,7 @@ class Manager
      * @param  string  $runtime  dir to save log
      * @param  int  $sleepTime  sleep time in microseconds
      */
-    public function __construct(string $name = 'PHP Process Manager', string $runtime = '', int $sleepTime = 100000)
+    public function __construct(string $name = 'php process manager', string $runtime = '', int $sleepTime = 100000)
     {
         $this->name = $name;
         $this->runtime = $runtime;
