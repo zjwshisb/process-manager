@@ -2,6 +2,16 @@
 This package provider an easy way to executes php callable in sub-processes with pcntl extension and executes commands in sub-processes
 with [symfony/process](https://github.com/symfony/process) package.
 
+<a href="https://github.com/zjwshisb/process-manager/actions">
+<img src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/style.yml?logo=%3D&label=style" />
+</a>
+<a href="https://github.com/zjwshisb/process-manager/actions">
+<img src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/tester.yml?logo=%3D&label=test" />
+</a>
+
+
+
+
 ## Installation
 
 ### Requirements
