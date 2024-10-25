@@ -8,7 +8,9 @@ with [symfony/process](https://github.com/symfony/process) package.
 <a href="https://github.com/zjwshisb/process-manager/actions">
 <img src="https://img.shields.io/github/actions/workflow/status/zjwshisb/process-manager/tester.yml?logo=%3D&label=test" />
 </a>
-
+<a href="https://github.com/zjwshisb/process-manager/actions">
+<img src="https://img.shields.io/codecov/c/github/zjwshisb/process-manager" />
+</a>
 
 
 
